@@ -89,7 +89,7 @@ function createLiveKitAdapter(
       })
       token.addGrant({ roomList: true })
 
-      return await fetch
+      const worldRoomNames = await fetch
         .fetch(`https://${host}/twirp/livekit.RoomService/ListRooms`, {
           method: 'POST',
           headers: {
@@ -99,23 +99,45 @@ function createLiveKitAdapter(
           body: '{}'
         })
         .then((response) => response.json())
-        .then((res: any): CommsStatus => {
-          const roomList = res.rooms
-            .filter((room: any) => room.name.startsWith(roomPrefix) && room.num_participants > 0)
-            .map((room: { name: string; num_participants: number }) => {
-              const { name, num_participants } = room
-              return { worldName: name.substring(roomPrefix.length), users: num_participants }
-            })
+        .then((res: any) =>
+          res.rooms.filter((room: any) => room.name.startsWith(roomPrefix)).map((room: { name: string }) => room.name)
+        )
 
-          return {
-            adapterType: 'livekit',
-            statusUrl: `https://${host}/`,
-            rooms: roomList.length,
-            users: roomList.reduce((carry: number, value: WorldStatus) => carry + value.users, 0),
-            details: roomList,
-            timestamp: Date.now()
-          }
+      const roomsWithUsers = await Promise.all(
+        worldRoomNames.map(async (roomName: string) => {
+          const token = new AccessToken(apiKey, apiSecret, {
+            name: 'SuperAdmin',
+            ttl: 5 * 60 // 5 minutes
+          })
+          token.addGrant({ roomAdmin: true, room: roomName })
+          return await fetch
+            .fetch(`https://${host}/twirp/livekit.RoomService/ListParticipants`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token.toJwt()}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ room: roomName })
+            })
+            .then((response) => response.json())
+            .then((data) => {
+              return { worldName: roomName.substring(roomPrefix.length), users: data.participants.length }
+            })
+            .catch((error) => {
+              console.log(error)
+              return { worldName: roomName.substring(roomPrefix.length), users: 0 }
+            })
         })
+      )
+
+      return {
+        adapterType: 'livekit',
+        statusUrl: `https://${host}/`,
+        rooms: roomsWithUsers.length,
+        users: roomsWithUsers.reduce((carry: number, value: WorldStatus) => carry + value.users, 0),
+        details: roomsWithUsers,
+        timestamp: Date.now()
+      }
     },
 
     async connectionString(userId: string, roomId: string, name: string | undefined = undefined): Promise<string> {
