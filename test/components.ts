@@ -8,7 +8,6 @@ import { TestComponents } from '../src/types'
 import { initComponents as originalInitComponents } from '../src/components'
 import { createMockMarketplaceSubGraph } from './mocks/marketplace-subgraph-mock'
 import { createMockNamePermissionChecker } from './mocks/dcl-name-checker-mock'
-import { createValidator } from '../src/adapters/validator'
 import { createMockLimitsManagerComponent } from './mocks/limits-manager-mock'
 import { createWorldsManagerComponent } from '../src/adapters/worlds-manager'
 import { createMockStatusComponent } from './mocks/status-mock'
@@ -16,6 +15,8 @@ import { createInMemoryStorage } from '@dcl/catalyst-storage'
 import { createMockCommsAdapterComponent } from './mocks/comms-adapter-mock'
 import { createWorldsIndexerComponent } from '../src/adapters/worlds-indexer'
 import * as nodeFetch from 'node-fetch'
+
+import { createValidator } from '../src/logic/validations/validator'
 
 /**
  * Behaves like Jest "describe" function, used to describe a test for a
@@ -67,7 +68,6 @@ async function initComponents(): Promise<TestComponents> {
     storage,
     namePermissionChecker,
     limitsManager,
-    ethereumProvider: components.ethereumProvider,
     worldsManager
   })
   const status = createMockStatusComponent()
