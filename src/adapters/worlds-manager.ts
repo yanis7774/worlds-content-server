@@ -13,7 +13,7 @@ export async function createWorldsManagerComponent({
   const cache = new LRU<string, string[]>({
     max: 1,
     ttl: 10 * 60 * 1000, // cache for 10 minutes
-    fetchMethod: async (_, staleValue): Promise<string[]> => {
+    fetchMethod: async (_, staleValue): Promise<string[] | undefined> => {
       try {
         const worlds = []
         for await (const key of storage.allFileIds('name-')) {
@@ -60,7 +60,7 @@ export async function createWorldsManagerComponent({
     const json = JSON.parse((await streamToBuffer(await content?.asStream())).toString())
 
     return {
-      // the timestamp is not stored int the entity :/
+      // the timestamp is not stored in the entity :/
       timestamp: 0,
       ...json,
       id: entityId
