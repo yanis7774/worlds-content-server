@@ -55,11 +55,6 @@ export type IWorldNamePermissionChecker = {
   checkPermission(ethAddress: EthAddress, worldName: string): Promise<boolean>
 }
 
-export type ContentStatus = {
-  commitHash: string
-  worldsCount: number
-}
-
 export type WorldStatus = { worldName: string; users: number }
 
 export type WorldData = {
@@ -87,11 +82,6 @@ export type CommsStatus = {
   timestamp: number
 }
 
-export type StatusResponse = {
-  content: ContentStatus
-  comms: CommsStatus
-}
-
 export type ICommsAdapter = {
   connectionString(ethAddress: EthAddress, roomId: string, name?: string): Promise<string>
   status(): Promise<CommsStatus>
@@ -105,9 +95,7 @@ export type ILimitsManager = {
 
 export type IWorldsManager = {
   getDeployedWorldsNames(): Promise<string[]>
-  getDeployedWorldsCount(): Promise<number>
   getMetadataForWorld(worldName: string): Promise<WorldMetadata | undefined>
-  getEntityIdForWorld(worldName: string): Promise<string | undefined>
   getEntityForWorld(worldName: string): Promise<Entity | undefined>
   storeAcl(worldName: string, acl: AuthChain): Promise<void>
 }
@@ -180,8 +168,6 @@ export type HandlerContextWithPath<
   }>,
   Path
 >
-
-export type Context<Path extends string = any> = IHttpServerComponent.PathAwareContext<GlobalContext, Path>
 
 export class InvalidRequestError extends Error {
   constructor(message: string) {
