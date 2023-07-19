@@ -2,7 +2,6 @@ import { test } from '../components'
 import { getIdentity, storeJson } from '../utils'
 import { Authenticator } from '@dcl/crypto'
 
-const STORED_ENTITY = { metadata: {} }
 const ENTITY_CID = 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y'
 const ENS = 'some-name.dcl.eth'
 
@@ -36,9 +35,17 @@ test('world about handler /world/:world_name/about', function ({ components }) {
   it('when world exists it responds', async () => {
     const { localFetch, storage } = components
 
-    await storeJson(storage, ENTITY_CID, STORED_ENTITY)
     await storeJson(storage, `name-${ENS}`, {
-      entityId: ENTITY_CID
+      entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [ENTITY_CID],
+        minimapDataImage: 'bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq',
+        minimapEstateImage: undefined,
+        minimapVisible: false,
+        name: 'some-name.dcl.eth',
+        skyboxTextures: ['bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq'],
+        thumbnailFile: 'bafkreic4chubh3cavwuzgsvszpmhi4zqpf5kfgt6goufuarwbzv4yrkdqq'
+      }
     })
 
     const r = await localFetch.fetch(`/world/${ENS}/about`)
@@ -50,8 +57,13 @@ test('world about handler /world/:world_name/about', function ({ components }) {
         networkId: 5,
         globalScenesUrn: [],
         scenesUrn: [`urn:decentraland:entity:${ENTITY_CID}?=&baseUrl=http://0.0.0.0:3000/contents/`],
-        minimap: { enabled: false },
-        skybox: {},
+        minimap: {
+          enabled: false,
+          dataImage: 'http://0.0.0.0:3000/contents/bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq'
+        },
+        skybox: {
+          textures: ['http://0.0.0.0:3000/contents/bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq']
+        },
         realmName: ENS
       },
       content: { healthy: true, publicUrl: 'https://peer.com/content' },
@@ -69,15 +81,13 @@ test('world about handler /world/:world_name/about', function ({ components }) {
   it('when world exists and has minimap it responds', async () => {
     const { localFetch, storage } = components
 
-    await storeJson(storage, 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y', {
-      metadata: {
-        worldConfiguration: {
-          minimapVisible: true
-        }
-      }
-    })
     await storeJson(storage, 'name-some-name.dcl.eth', {
-      entityId: 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y'
+      entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [ENTITY_CID],
+        minimapVisible: true,
+        name: 'some-name.dcl.eth'
+      }
     })
 
     const r = await localFetch.fetch('/world/some-name.dcl.eth/about')
@@ -92,50 +102,25 @@ test('world about handler /world/:world_name/about', function ({ components }) {
       }
     })
 
-    await storeJson(storage, 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y', {
-      metadata: {
-        worldConfiguration: {
-          miniMapConfig: { visible: true }
-        }
+    await storeJson(storage, 'name-some-other-name.dcl.eth', {
+      entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [ENTITY_CID],
+        minimapVisible: false,
+        name: 'some-name.dcl.eth',
+        minimapDataImage: 'bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq',
+        minimapEstateImage: 'bafkreic4chubh3cavwuzgsvszpmhi4zqpf5kfgt6goufuarwbzv4yrkdqq'
       }
     })
-    const r2 = await localFetch.fetch('/world/some-name.dcl.eth/about')
+
+    const r2 = await localFetch.fetch('/world/some-other-name.dcl.eth/about')
     expect(r2.status).toEqual(200)
     expect(await r2.json()).toMatchObject({
       configurations: {
         minimap: {
-          enabled: true,
-          dataImage: 'https://api.decentraland.org/v1/minimap.png',
-          estateImage: 'https://api.decentraland.org/v1/estatemap.png'
-        }
-      }
-    })
-
-    await storeJson(storage, 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y', {
-      metadata: {
-        worldConfiguration: {
-          minimapVisible: false,
-          miniMapConfig: {
-            dataImage: 'black_image.png',
-            estateImage: 'black_image.png'
-          }
-        }
-      },
-      content: [
-        {
-          file: 'black_image.png',
-          hash: 'bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq'
-        }
-      ]
-    })
-    const r3 = await localFetch.fetch('/world/some-name.dcl.eth/about')
-    expect(r3.status).toEqual(200)
-    expect(await r3.json()).toMatchObject({
-      configurations: {
-        minimap: {
           enabled: false,
           dataImage: 'http://0.0.0.0:3000/contents/bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq',
-          estateImage: 'http://0.0.0.0:3000/contents/bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq'
+          estateImage: 'http://0.0.0.0:3000/contents/bafkreic4chubh3cavwuzgsvszpmhi4zqpf5kfgt6goufuarwbzv4yrkdqq'
         }
       }
     })
@@ -146,24 +131,13 @@ test('world about handler /world/:world_name/about', function ({ components }) {
   it('when world exists and has skybox textures it responds', async () => {
     const { localFetch, storage } = components
 
-    await storeJson(storage, 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y', {
-      metadata: {
-        worldConfiguration: {
-          name: 'some-name.dcl.eth',
-          skyboxConfig: {
-            textures: ['black_image.png']
-          }
-        }
-      },
-      content: [
-        {
-          file: 'black_image.png',
-          hash: 'bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq'
-        }
-      ]
-    })
     await storeJson(storage, 'name-some-name.dcl.eth', {
-      entityId: 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y'
+      entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [ENTITY_CID],
+        name: 'some-name.dcl.eth',
+        skyboxTextures: ['bafkreidduubi76bntd27dewz4cvextrfl3qyd4td6mtztuisxi26q64dnq']
+      }
     })
 
     const r = await localFetch.fetch('/world/some-name.dcl.eth/about')
@@ -182,15 +156,13 @@ test('world about handler /world/:world_name/about', function ({ components }) {
   it('when world exists and uses offline comms', async () => {
     const { localFetch, storage } = components
 
-    await storeJson(storage, 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y', {
-      metadata: {
-        worldConfiguration: {
-          fixedAdapter: 'offline:offline'
-        }
-      }
-    })
     await storeJson(storage, 'name-some-name.dcl.eth', {
-      entityId: 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y'
+      entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [ENTITY_CID],
+        name: 'some-name.dcl.eth',
+        fixedAdapter: 'offline:offline'
+      }
     })
 
     const r = await localFetch.fetch('/world/some-name.dcl.eth/about')
@@ -220,13 +192,15 @@ test('world about handler /world/:world_name/about', function ({ components }) {
     const { localFetch, storage } = components
 
     await storeJson(storage, 'name-some-name.dcl.eth', {
-      entityId: 'bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y'
+      // entityId: ENTITY_CID,
+      runtimeMetadata: {
+        entityIds: [],
+        name: 'some-name.dcl.eth'
+      }
     })
 
     const r = await localFetch.fetch('/world/some-name.dcl.eth/about')
     expect(r.status).toEqual(404)
-    expect(await r.text()).toEqual(
-      'Scene "bafybeictjyqjlkgybfckczpuqlqo7xfhho3jpnep4wesw3ivaeeuqugc2y" not deployed in this server.'
-    )
+    expect(await r.text()).toEqual('World "some-name.dcl.eth" has no scene deployed.')
   })
 })

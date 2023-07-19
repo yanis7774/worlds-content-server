@@ -35,13 +35,14 @@ test('active entities handler /entities/active', function ({ components }) {
   })
 })
 
-test('world about handler /world/:world_name/about', function ({ components }) {
+test('active entities handler /entities/active', function ({ components }) {
   it('when world is deployed it responds [<Entity>] in active entities endpoint', async () => {
     const { localFetch, storage } = components
 
     await storeJson(storage, ENTITY_CID, STORED_ENTITY)
     await storeJson(storage, `name-${ENS}`, {
-      entityId: ENTITY_CID
+      entityId: ENTITY_CID,
+      runtimeMetadata: { name: ENS, entityIds: [ENTITY_CID] }
     })
     const r = await localFetch.fetch('/entities/active', {
       method: 'POST',

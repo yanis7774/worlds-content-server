@@ -25,9 +25,22 @@ export type DeploymentToValidate = {
   contentHashesInStorage: Map<string, boolean>
 }
 
+export type WorldRuntimeMetadata = {
+  entityIds: string[]
+  name: string
+  minimapVisible: boolean
+  minimapDataImage?: string
+  minimapEstateImage?: string
+  skyboxFixedTime?: number
+  skyboxTextures?: string[]
+  fixedAdapter?: string
+  thumbnailFile?: string
+}
+
 export type WorldMetadata = {
   entityId: string
   acl?: AuthChain
+  runtimeMetadata: WorldRuntimeMetadata
 }
 
 export type AccessControlList = {
@@ -100,7 +113,7 @@ export type IWorldsManager = {
   getDeployedWorldsNames(): Promise<string[]>
   getMetadataForWorld(worldName: string): Promise<WorldMetadata | undefined>
   getEntityForWorld(worldName: string): Promise<Entity | undefined>
-  storeAcl(worldName: string, acl: AuthChain): Promise<void>
+  storeWorldMetadata(worldName: string, metadata: Partial<WorldMetadata>): Promise<void>
 }
 
 export type WorldsIndex = {
