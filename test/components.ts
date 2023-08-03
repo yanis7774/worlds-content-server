@@ -20,6 +20,7 @@ import { createValidator } from '../src/logic/validations'
 import { createTestMetricsComponent } from '@well-known-components/metrics'
 import { metricDeclarations } from '../src/metrics'
 import { createEntityDeployer } from '../src/adapters/entity-deployer'
+import { createMockNameDenyListChecker } from './mocks/name-deny-list-checker-mock'
 
 /**
  * Behaves like Jest "describe" function, used to describe a test for a
@@ -41,6 +42,8 @@ async function initComponents(): Promise<TestComponents> {
   const metrics = createTestMetricsComponent(metricDeclarations)
 
   const storage = createInMemoryStorage()
+
+  const nameDenyListChecker = createMockNameDenyListChecker()
 
   const namePermissionChecker = createMockNamePermissionChecker()
 
@@ -64,6 +67,7 @@ async function initComponents(): Promise<TestComponents> {
   const worldsManager = await createWorldsManagerComponent({ logs, storage })
   const worldsIndexer = await createWorldsIndexerComponent({
     logs,
+    nameDenyListChecker,
     storage,
     worldsManager
   })
@@ -76,6 +80,7 @@ async function initComponents(): Promise<TestComponents> {
   const validator = createValidator({
     config,
     storage,
+    nameDenyListChecker,
     namePermissionChecker,
     limitsManager,
     worldsManager

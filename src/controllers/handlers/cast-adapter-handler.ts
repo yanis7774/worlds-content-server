@@ -6,13 +6,13 @@ import { AccessToken } from 'livekit-server-sdk'
 
 export async function castAdapterHandler(
   context: HandlerContextWithPath<
-    'config' | 'storage' | 'namePermissionChecker' | 'worldsManager' | 'fetch',
+    'config' | 'fetch' | 'nameDenyListChecker' | 'namePermissionChecker' | 'storage' | 'worldsManager',
     '/meet-adapter/:roomId'
   > &
     DecentralandSignatureContext<any>
 ): Promise<IHttpServerComponent.IResponse> {
   const {
-    components: { config, storage, fetch }
+    components: { config, fetch, nameDenyListChecker, storage }
   } = context
 
   const [host, apiKey, apiSecret] = await Promise.all([
@@ -50,6 +50,10 @@ export async function castAdapterHandler(
   }
 
   const worldName = context.params.roomId.substring(roomPrefix.length)
+
+  if (!(await nameDenyListChecker.checkNameDenyList(worldName))) {
+    throw new NotFoundError(`World "${worldName}" does not exist.`)
+  }
 
   if (!(await storage.exist('name-' + worldName))) {
     throw new NotFoundError(`World "${worldName}" does not exist.`)
