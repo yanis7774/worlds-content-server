@@ -11,7 +11,7 @@ import { IContentStorageComponent } from '@dcl/catalyst-storage'
 import { HTTPProvider } from 'eth-connect'
 import { ISubgraphComponent } from '@well-known-components/thegraph-component'
 import { IStatusComponent } from './adapters/status'
-import { AuthChain, AuthLink, Entity, EthAddress } from '@dcl/schemas'
+import { AuthChain, AuthLink, Entity, EthAddress, IPFSv2 } from '@dcl/schemas'
 import { MigrationExecutor } from './migrations/migration-executor'
 
 export type GlobalContext = {
@@ -120,7 +120,8 @@ export type IWorldsManager = {
   getDeployedWorldsNames(): Promise<string[]>
   getMetadataForWorld(worldName: string): Promise<WorldMetadata | undefined>
   getEntityForWorld(worldName: string): Promise<Entity | undefined>
-  storeWorldMetadata(worldName: string, metadata: Partial<WorldMetadata>): Promise<void>
+  deployScene(worldName: string, scene: Entity): Promise<void>
+  storeAcl(worldName: string, acl: AuthChain): Promise<void>
 }
 
 export type WorldsIndex = {
@@ -172,6 +173,15 @@ export type BaseComponents = {
 
 export type SnsComponent = { arn?: string }
 
+export type IWorldCreator = {
+  createWorldWithScene(data?: {
+    worldName?: string
+    metadata?: any
+    files?: Map<string, ArrayBuffer>
+  }): Promise<{ worldName: string; entityId: IPFSv2; entity: Entity }>
+  randomWorldName(): string
+}
+
 // components used in runtime
 export type AppComponents = BaseComponents & {
   statusChecks: IBaseComponent
@@ -181,6 +191,7 @@ export type AppComponents = BaseComponents & {
 export type TestComponents = BaseComponents & {
   // A fetch component that only hits the test server
   localFetch: IFetchComponent
+  worldCreator: IWorldCreator
 }
 
 // this type simplifies the typings of http handlers
