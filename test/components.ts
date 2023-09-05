@@ -9,7 +9,6 @@ import { initComponents as originalInitComponents } from '../src/components'
 import { createMockMarketplaceSubGraph } from './mocks/marketplace-subgraph-mock'
 import { createMockNamePermissionChecker } from './mocks/dcl-name-checker-mock'
 import { createMockLimitsManagerComponent } from './mocks/limits-manager-mock'
-import { createWorldsManagerComponent } from '../src/adapters/worlds-manager'
 import { createMockStatusComponent } from './mocks/status-mock'
 import { createInMemoryStorage } from '@dcl/catalyst-storage'
 import { createMockCommsAdapterComponent } from './mocks/comms-adapter-mock'
@@ -22,6 +21,7 @@ import { metricDeclarations } from '../src/metrics'
 import { createEntityDeployer } from '../src/adapters/entity-deployer'
 import { createMockNameDenyListChecker } from './mocks/name-deny-list-checker-mock'
 import { createWorldCreator } from './mocks/world-creator'
+import { createWorldsManagerComponent } from '../src/adapters/worlds-manager'
 
 /**
  * Behaves like Jest "describe" function, used to describe a test for a
@@ -38,7 +38,7 @@ export const test = createRunner<TestComponents>({
 async function initComponents(): Promise<TestComponents> {
   const components = await originalInitComponents()
 
-  const { config, logs } = components
+  const { config, logs, database } = components
 
   const metrics = createTestMetricsComponent(metricDeclarations)
 
@@ -65,13 +65,8 @@ async function initComponents(): Promise<TestComponents> {
 
   const commsAdapter = createMockCommsAdapterComponent()
 
-  const worldsManager = await createWorldsManagerComponent({ logs, storage })
-  const worldsIndexer = await createWorldsIndexerComponent({
-    logs,
-    nameDenyListChecker,
-    storage,
-    worldsManager
-  })
+  const worldsManager = await createWorldsManagerComponent({ logs, database, nameDenyListChecker, storage })
+  const worldsIndexer = await createWorldsIndexerComponent({ worldsManager })
 
   const sns: SnsComponent = {
     arn: undefined
@@ -80,10 +75,10 @@ async function initComponents(): Promise<TestComponents> {
 
   const validator = createValidator({
     config,
-    storage,
+    limitsManager,
     nameDenyListChecker,
     namePermissionChecker,
-    limitsManager,
+    storage,
     worldsManager
   })
   const status = createMockStatusComponent()

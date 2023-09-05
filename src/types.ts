@@ -13,6 +13,7 @@ import { ISubgraphComponent } from '@well-known-components/thegraph-component'
 import { IStatusComponent } from './adapters/status'
 import { AuthChain, AuthLink, Entity, EthAddress, IPFSv2 } from '@dcl/schemas'
 import { MigrationExecutor } from './migrations/migration-executor'
+import { IPgComponent } from '@well-known-components/pg-component'
 
 export type GlobalContext = {
   components: BaseComponents
@@ -63,7 +64,7 @@ export type ValidatorComponents = Pick<
   'config' | 'limitsManager' | 'nameDenyListChecker' | 'namePermissionChecker' | 'storage' | 'worldsManager'
 >
 
-export type MigratorComponents = Pick<AppComponents, 'logs' | 'storage' | 'worldsManager'>
+export type MigratorComponents = Pick<AppComponents, 'logs' | 'database' | 'storage' | 'worldsManager'>
 
 export type Validation = (deployment: DeploymentToValidate) => ValidationResult | Promise<ValidationResult>
 
@@ -117,7 +118,8 @@ export type ILimitsManager = {
 }
 
 export type IWorldsManager = {
-  getDeployedWorldsNames(): Promise<string[]>
+  getDeployedWorldCount(): Promise<number>
+  getDeployedWorldEntities(): Promise<Entity[]>
   getMetadataForWorld(worldName: string): Promise<WorldMetadata | undefined>
   getEntityForWorld(worldName: string): Promise<Entity | undefined>
   deployScene(worldName: string, scene: Entity): Promise<void>
@@ -162,6 +164,7 @@ export type BaseComponents = {
   migrationExecutor: MigrationExecutor
   nameDenyListChecker: INameDenyListChecker
   namePermissionChecker: IWorldNamePermissionChecker
+  database: IPgComponent
   server: IHttpServerComponent<GlobalContext>
   sns: SnsComponent
   status: IStatusComponent
