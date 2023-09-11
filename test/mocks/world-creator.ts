@@ -1,9 +1,10 @@
-import { AppComponents, IWorldCreator } from '../../src/types'
+import { AppComponents, IWorldCreator, Permissions } from '../../src/types'
 import { Entity, EntityType, IPFSv2 } from '@dcl/schemas'
 import { DeploymentBuilder } from 'dcl-catalyst-client'
 import { TextDecoder } from 'util'
-import { getIdentity, Identity, makeid, storeJson } from '../utils'
-import { Authenticator } from '@dcl/crypto'
+import { getIdentity, makeid, storeJson } from '../utils'
+import { Authenticator, AuthIdentity } from '@dcl/crypto'
+import { defaultPermissions } from '../../src/logic/permissions-checker'
 
 export function createWorldCreator({
   storage,
@@ -13,8 +14,9 @@ export function createWorldCreator({
     worldName?: string
     metadata?: any
     files?: Map<string, ArrayBuffer>
-    identity?: Identity
-  }): Promise<{ worldName: string; entityId: IPFSv2; entity: Entity }> {
+    permissions?: Permissions
+    owner?: AuthIdentity
+  }): Promise<{ worldName: string; entityId: IPFSv2; entity: Entity; owner: AuthIdentity }> {
     const worldName: string = data?.worldName || `w-${makeid(10)}.dcl.eth`
     const metadata = data?.metadata || {
       main: 'abc.txt',
@@ -26,28 +28,32 @@ export function createWorldCreator({
         name: worldName
       }
     }
-    const identity = data?.identity || (await getIdentity())
+
+    const signer = data?.owner || (await getIdentity())?.authChain
     const { files, entityId } = await DeploymentBuilder.buildEntity({
       type: EntityType.SCENE as any,
       pointers: metadata.scene.parcels,
       files: data?.files || new Map(),
       metadata
     })
+    const permissions = data?.permissions || defaultPermissions()
 
     const entityWithoutId = JSON.parse(new TextDecoder().decode(files.get(entityId)))
     await storeJson(storage, entityId, entityWithoutId)
 
-    const authChain = Authenticator.signPayload(identity.authChain, entityId)
+    const authChain = Authenticator.signPayload(signer, entityId)
     await storeJson(storage, entityId + '.auth', authChain)
 
     const entity = { id: entityId, ...entityWithoutId }
 
     await worldsManager.deployScene(worldName, entity)
+    await worldsManager.storePermissions(worldName, permissions)
 
     return {
       worldName,
       entityId,
-      entity
+      entity,
+      owner: signer
     }
   }
 

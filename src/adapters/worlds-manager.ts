@@ -1,10 +1,11 @@
-import { AppComponents, IWorldsManager, WorldMetadata } from '../types'
+import { AppComponents, IPermissionChecker, IWorldsManager, Permissions, PermissionType, WorldMetadata } from '../types'
 import { bufferToStream, streamToBuffer } from '@dcl/catalyst-storage'
 import { AuthChain, Entity } from '@dcl/schemas'
 import { stringToUtf8Bytes } from 'eth-connect'
 import SQL from 'sql-template-strings'
 import { extractWorldRuntimeMetadata } from '../logic/world-runtime-metadata-utils'
-import { deepEqual } from '../logic/deep-equal'
+import { createPermissionChecker, defaultPermissions } from '../logic/permissions-checker'
+import { deepEqual } from '../migrations/utils'
 
 type WorldRecord = {
   name: string
@@ -13,6 +14,7 @@ type WorldRecord = {
   deployment_auth_chain: AuthChain
   entity: any
   acl: any
+  permissions: Permissions
   created_at: Date
   updated_at: Date
 }
@@ -53,6 +55,9 @@ export async function createWorldsManagerComponent({
     }
     if (row.acl) {
       tempWorldMetadata.acl = row.acl
+    }
+    if (row.permissions) {
+      tempWorldMetadata.permissions = row.permissions
     }
     const fromDb = JSON.parse(JSON.stringify(tempWorldMetadata)) as WorldMetadata
 
@@ -113,17 +118,41 @@ export async function createWorldsManagerComponent({
   }
 
   async function storeAcl(worldName: string, acl: AuthChain): Promise<void> {
+    const worldMetadata = await getMetadataForWorld(worldName)
+    const permissions = worldMetadata?.permissions || defaultPermissions()
+    permissions.deployment.wallets = JSON.parse(acl.slice(-1).pop()!.payload).allowed
+    if (permissions.streaming.type === PermissionType.AllowList) {
+      permissions.streaming.wallets = permissions.deployment.wallets
+    }
+
     const sql = SQL`
-              INSERT INTO worlds (name, acl, created_at, updated_at)
-              VALUES (${worldName.toLowerCase()}, ${JSON.stringify(acl)}::json, ${new Date()}, ${new Date()})
+              INSERT INTO worlds (name, acl, permissions, created_at, updated_at)
+              VALUES (${worldName.toLowerCase()}, ${JSON.stringify(acl)}::json, ${JSON.stringify(permissions)}::json,
+                      ${new Date()}, ${new Date()})
               ON CONFLICT (name) 
                   DO UPDATE SET acl = ${JSON.stringify(acl)}::json,
+                                permissions = ${JSON.stringify(permissions)}::json,
                                 updated_at = ${new Date()}
     `
     await database.query(sql)
 
     // TODO remove once we are sure everything works fine with DB
-    await storeWorldMetadata(worldName, { acl })
+    await storeWorldMetadata(worldName, { acl, permissions })
+  }
+
+  async function storePermissions(worldName: string, permissions: Permissions): Promise<void> {
+    const sql = SQL`
+              INSERT INTO worlds (name, permissions, created_at, updated_at)
+              VALUES (${worldName.toLowerCase()}, ${JSON.stringify(permissions)}::json,
+                      ${new Date()}, ${new Date()})
+              ON CONFLICT (name) 
+                  DO UPDATE SET permissions = ${JSON.stringify(permissions)}::json,
+                                updated_at = ${new Date()}
+    `
+    await database.query(sql)
+
+    // TODO remove once we are sure everything works fine with DB
+    await storeWorldMetadata(worldName, { permissions })
   }
 
   async function getDeployedWorldCount(): Promise<number> {
@@ -163,12 +192,19 @@ export async function createWorldsManagerComponent({
     return mapEntity(result.rows[0])
   }
 
+  async function permissionCheckerForWorld(worldName: string): Promise<IPermissionChecker> {
+    const metadata = await getMetadataForWorld(worldName)
+    return createPermissionChecker(metadata?.permissions || defaultPermissions())
+  }
+
   return {
     getDeployedWorldCount,
     getDeployedWorldEntities,
     getMetadataForWorld,
     getEntityForWorld,
     deployScene,
-    storeAcl
+    storeAcl,
+    storePermissions,
+    permissionCheckerForWorld
   }
 }
