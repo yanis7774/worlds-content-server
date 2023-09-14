@@ -33,7 +33,7 @@ describe('validator', function () {
 
     storage = createInMemoryStorage()
     limitsManager = createMockLimitsManagerComponent()
-    nameDenyListChecker = createMockNameDenyListChecker(['whatever.dcl.eth'])
+    nameDenyListChecker = createMockNameDenyListChecker([])
     worldNamePermissionChecker = createMockNamePermissionChecker(['whatever.dcl.eth'])
     worldsManager = await createWorldsManagerMockComponent({ storage })
 
@@ -49,7 +49,7 @@ describe('validator', function () {
   })
 
   it('all validations pass for scene', async () => {
-    const validator = await createValidator(components)
+    const validator = createValidator(components)
 
     const deployment = await createSceneDeployment(identity.authChain)
 
