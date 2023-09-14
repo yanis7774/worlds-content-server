@@ -1,6 +1,6 @@
 import { AppComponents, IPermissionChecker, IWorldsManager, Permissions, WorldMetadata } from '../../src/types'
 import { bufferToStream, streamToBuffer } from '@dcl/catalyst-storage'
-import { AuthChain, Entity } from '@dcl/schemas'
+import { Entity } from '@dcl/schemas'
 import { stringToUtf8Bytes } from 'eth-connect'
 import { extractWorldRuntimeMetadata } from '../../src/logic/world-runtime-metadata-utils'
 import { createPermissionChecker, defaultPermissions } from '../../src/logic/permissions-checker'
@@ -53,10 +53,6 @@ export async function createWorldsManagerMockComponent({
     })
   }
 
-  async function storeAcl(worldName: string, acl: AuthChain): Promise<void> {
-    await storeWorldMetadata(worldName, { acl })
-  }
-
   async function storePermissions(worldName: string, permissions: Permissions): Promise<void> {
     await storeWorldMetadata(worldName, { permissions })
   }
@@ -91,7 +87,6 @@ export async function createWorldsManagerMockComponent({
     getMetadataForWorld,
     getEntityForWorld,
     deployScene,
-    storeAcl,
     storePermissions,
     permissionCheckerForWorld
   }
