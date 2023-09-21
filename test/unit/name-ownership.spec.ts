@@ -1,6 +1,6 @@
 import { createConfigComponent } from '@well-known-components/env-config-provider'
 import { createLogComponent } from '@well-known-components/logger'
-import { IConfigComponent, ILoggerComponent, IMetricsComponent } from '@well-known-components/interfaces'
+import { IConfigComponent, ILoggerComponent } from '@well-known-components/interfaces'
 import { createHttpProviderMock } from '../mocks/http-provider-mock'
 import { createMockNameSubGraph } from '../mocks/name-subgraph-mock'
 import {
@@ -9,24 +9,15 @@ import {
   createNameOwnership,
   createOnChainDclNameOwnership
 } from '../../src/adapters/name-ownership'
-import { createFetchComponent } from '../../src/adapters/fetch'
-import { IFetchComponent } from '@well-known-components/http-server'
-import { createTestMetricsComponent } from '@well-known-components/metrics'
-import { metricDeclarations } from '../../src/metrics'
-import { Response } from 'node-fetch'
 
 describe('Name Ownership', () => {
   let logs: ILoggerComponent
-  let fetch: IFetchComponent
-  let metrics: IMetricsComponent<keyof typeof metricDeclarations>
   beforeEach(async () => {
     logs = await createLogComponent({
       config: createConfigComponent({
         LOG_LEVEL: 'DEBUG'
       })
     })
-    fetch = await createFetchComponent()
-    metrics = createTestMetricsComponent(metricDeclarations)
   })
 
   describe('createNameOwnership', function () {
@@ -38,8 +29,6 @@ describe('Name Ownership', () => {
         }),
         logs,
         ethereumProvider: createHttpProviderMock(),
-        fetch,
-        metrics,
         marketplaceSubGraph: createMockNameSubGraph()
       })
       await expect(nameOwnership.findOwner('my-super-name.eth')).resolves.toBeUndefined()
@@ -56,13 +45,11 @@ describe('Name Ownership', () => {
         ethereumProvider: createHttpProviderMock([
           { jsonrpc: '2.0', id: 1, result: '0x0000000000000000000000005de9e77627c79ff6ec787295e4191aeeeea4acab' }
         ]),
-        fetch,
-        metrics,
         marketplaceSubGraph: createMockNameSubGraph()
       })
       await expect(nameOwnership.findOwner('my-super-name.eth')).resolves.toBeUndefined()
       await expect(nameOwnership.findOwner('my-super-name.dcl.eth')).resolves.toBe(
-        '0x5De9e77627c79fF6ec787295E4191AEEeea4aCaB'
+        '0x5de9e77627c79ff6ec787295e4191aeeeea4acab'
       )
     })
 
@@ -75,8 +62,6 @@ describe('Name Ownership', () => {
           }),
           logs,
           ethereumProvider: createHttpProviderMock(),
-          fetch,
-          metrics,
           marketplaceSubGraph: createMockNameSubGraph()
         })
       ).rejects.toThrowError('Invalid nameValidatorStrategy selected: INVALID')
@@ -84,66 +69,59 @@ describe('Name Ownership', () => {
   })
 
   describe('ens name ownership', function () {
-    let fetch: any
-    beforeEach(async () => {
-      fetch = createFetchComponent()
-      fetch = {
-        fetch: jest.fn()
-      }
-    })
-
-    it('when no ens subgraph url provided it always returns undefined', async () => {
+    it('when ens domains are not allowed it always returns undefined', async () => {
       const config = createConfigComponent({})
-      const nameOwnership = await createEnsNameOwnership({ config, logs, fetch, metrics })
-      await expect(nameOwnership.findOwner('my-super-name.eth')).resolves.toBeUndefined()
-      expect(fetch.fetch).not.toHaveBeenCalled()
-    })
-
-    it('when no owner returned from TheGraph returns undefined', async () => {
-      const config = createConfigComponent({
-        ENS_SUBGRAPH_URL: 'http://localhost'
-      })
-      fetch.fetch.mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            data: {
-              nfts: []
-            }
-          })
-        )
-      )
-
-      const nameOwnership = await createEnsNameOwnership({ config, logs, fetch, metrics })
+      const nameOwnership = await createEnsNameOwnership({ config, ethereumProvider: createHttpProviderMock(), logs })
       await expect(nameOwnership.findOwner('my-super-name.eth')).resolves.toBeUndefined()
     })
 
-    it('when an owner is returned from the subgraph it returns it', async () => {
+    it('when no owner returned from the RPC call it returns 0x0', async () => {
       const config = createConfigComponent({
-        ENS_SUBGRAPH_URL: 'http://localhost'
+        ETH_NETWORK: 'mainnet',
+        ALLOW_ENS_DOMAINS: 'true'
       })
-      fetch.fetch.mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            data: {
-              nfts: [
-                {
-                  name: 'something.eth',
-                  owner: {
-                    id: '0x1'
-                  }
-                }
-              ]
-            }
-          })
-        )
-      )
+
       const nameOwnership = await createEnsNameOwnership({
         config,
-        logs,
-        fetch,
-        metrics
+        ethereumProvider: createHttpProviderMock([
+          { jsonrpc: '2.0', id: 3, result: '0x0000000000000000000000000000000000000000000000000000000000000000' }
+        ]),
+        logs
       })
-      await expect(nameOwnership.findOwner('something.eth')).resolves.toBe('0x1')
+      await expect(nameOwnership.findOwner('my-super-name.eth')).resolves.toBe(
+        '0x0000000000000000000000000000000000000000'
+      )
+    })
+
+    it('when the owner is NameWrapper we ask that contract and return the response', async () => {
+      const config = createConfigComponent({
+        ETH_NETWORK: 'mainnet',
+        ALLOW_ENS_DOMAINS: 'true'
+      })
+      const nameOwnership = await createEnsNameOwnership({
+        config,
+        ethereumProvider: createHttpProviderMock([
+          { jsonrpc: '2.0', id: 2, result: '0x000000000000000000000000D4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401' },
+          { jsonrpc: '2.0', id: 2, result: '0x000000000000000000000000d76a10326397f3d07fa0d1fa5296933ec2747f18' }
+        ]),
+        logs
+      })
+      await expect(nameOwnership.findOwner('something.eth')).resolves.toBe('0xd76a10326397f3d07fa0d1fa5296933ec2747f18')
+    })
+
+    it('when an owner is returned from the RPC call it returns it', async () => {
+      const config = createConfigComponent({
+        ETH_NETWORK: 'mainnet',
+        ALLOW_ENS_DOMAINS: 'true'
+      })
+      const nameOwnership = await createEnsNameOwnership({
+        config,
+        ethereumProvider: createHttpProviderMock([
+          { jsonrpc: '2.0', id: 2, result: '0x0000000000000000000000004cb6118ec2949ad2a06293268072659f4267a012' }
+        ]),
+        logs
+      })
+      await expect(nameOwnership.findOwner('something.eth')).resolves.toBe('0x4cb6118ec2949ad2a06293268072659f4267a012')
     })
   })
 
@@ -213,7 +191,7 @@ describe('Name Ownership', () => {
         ])
       })
       await expect(nameOwnership.findOwner('mariano.dcl.eth')).resolves.toBe(
-        '0x5De9e77627c79fF6ec787295E4191AEEeea4aCaB'
+        '0x5de9e77627c79ff6ec787295e4191aeeeea4acab'
       )
     })
   })

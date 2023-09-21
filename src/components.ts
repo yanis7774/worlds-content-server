@@ -78,11 +78,10 @@ export async function initComponents(): Promise<AppComponents> {
   const nameOwnership = await createNameOwnership({
     config,
     ethereumProvider,
-    fetch,
     logs,
-    marketplaceSubGraph,
-    metrics
+    marketplaceSubGraph
   })
+
   const namePermissionChecker: IWorldNamePermissionChecker = createNameChecker({
     logs,
     nameOwnership
