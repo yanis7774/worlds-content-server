@@ -91,7 +91,13 @@ export async function initComponents(): Promise<AppComponents> {
 
   const database = await createDatabaseComponent({ config, logs, metrics })
 
-  const worldsManager = await createWorldsManagerComponent({ logs, database, nameDenyListChecker, storage })
+  const worldsManager = await createWorldsManagerComponent({
+    logs,
+    database,
+    nameDenyListChecker,
+    nameOwnership,
+    storage
+  })
   const worldsIndexer = await createWorldsIndexerComponent({ worldsManager })
   const permissionsManager = await createPermissionsManagerComponent({ worldsManager })
 
@@ -105,7 +111,7 @@ export async function initComponents(): Promise<AppComponents> {
     worldsManager
   })
 
-  const migrationExecutor = createMigrationExecutor({ logs, database: database, storage, worldsManager })
+  const migrationExecutor = createMigrationExecutor({ logs, database: database, nameOwnership, storage, worldsManager })
 
   return {
     commsAdapter,
