@@ -1,7 +1,10 @@
-dist/
-node_modules/
-**/.DS_Store
-coverage
-contents
-.env
-yarn-error.log
+# File konfigurasi IDE
+# ---------------------
+/nbproject/
+.idea/*
+# File cache Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
